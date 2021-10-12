@@ -29,21 +29,27 @@ router.get('/login', async function (req, res){
 
 // CHECK TOKEN
 router.get('/check', async function (req, res){
-    const token = req.cookies["access_token"]?.split(" ")?.[1] || req.headers["access_token"]?.split(" ")?.[1] || null;
-    if (!token) res.status(errors.auth.code).json(errors.auth);
+    const sendError = () => {
+        res.status(errors.auth.code).json(errors.auth);
+        return null;
+    }
+
+    const token = req.cookies["access_token"]?.split(" ")?.[1] || req.headers["access_token"]?.replace(/%20/g, " ").split(" ")?.[1] || null;
+    if (!token) sendError();
 
     const decodedToken = jwt.verify(token, process.env.TOKEN_KEY);
-    const date = Math.floor((Date.now() / 1000) - 30);
+    if (Date.now() <= decodedToken.iat*1000) sendError();
 
-    res.json({ info: decodedToken, date: date });
+    res.json({ data: decodedToken });
 })
 
 // router.get('/refresh', async function (){
 //
 // })
 //
-router.get('/logout', async function (){
-
+router.get('/logout', async function (req, res){
+    res.clearCookie("access_token");
+    res.status(200).json({ status: "ok" });
 })
 
 module.exports = router;
